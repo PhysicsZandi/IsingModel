@@ -1,34 +1,26 @@
 import networkx as nx
 from ising_class import IsingNetwork, IsingEnsemble
 
-def equilibrium():
-    number_of_rows = 100
-    number_of_columns = 100
-    graph = nx.grid_2d_graph(number_of_rows, number_of_columns)
+def equilibrium(side, time_evolution):
+    graph = nx.grid_2d_graph(side)
 
     temperatures = [0.2 + 0.2 * i for i in range(20)]
     for temperature in temperatures:
-        time_evolution = 1000
         ising = IsingNetwork(graph, temperature)
         ising.reach_equilibrium(time_evolution)
         ising.plot_physics(temperature)
 
-def sequence():
-    number_of_rows = 100
-    number_of_columns = 100
-    graph = nx.grid_2d_graph(number_of_rows, number_of_columns)
+def sequence(side, time_evolution):    
+    graph = nx.grid_2d_graph(side)
 
     temperatures = [0.2 + 0.2 * i for i in range(20)]
     for temperature in temperatures:
-        time_evolution = 10
         ising = IsingNetwork(graph, temperature)
         ising.reach_equilibrium(time_evolution)
         ising.plot_network_animation(temperature)
 
-def phase_transition():
-    number_of_rows = 10
-    number_of_columns = 10
-    graph = nx.grid_2d_graph(number_of_rows, number_of_columns)
+def phase_transition(side):
+    graph = nx.grid_2d_graph(side)
 
     number_of_iterations = 3000
     initial_temperature = 0.2
@@ -36,12 +28,16 @@ def phase_transition():
     number_of_steps = 20
     ising = IsingEnsemble(number_of_iterations, initial_temperature, final_temperature, number_of_steps, graph)
     ising.phase_transitions()
-    ising.plot_physics(number_of_rows)
+    ising.plot_physics(side)
     ising.get_critical_temperature()
 
-#equilibrium()
-#sequence()
-phase_transition()
+
+side = 100
+time_evolution = 1000
+
+equilibrium(side, time_evolution)
+sequence(side, time_evolution)
+phase_transition(side, time_evolution)
 
 ####################################################################################
     
