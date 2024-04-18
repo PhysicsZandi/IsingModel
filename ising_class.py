@@ -1,8 +1,9 @@
-import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as ani
 import matplotlib.patches as pat
+import matplotlib.animation as ani
+import numpy as np
 from tqdm import tqdm
+import os
 
 class IsingNetwork:
     def __init__(self, graph, temperature, j = 1, b = 0):
@@ -10,14 +11,12 @@ class IsingNetwork:
         self.graph = graph
         self.number_of_nodes = graph.number_of_nodes()
         self.nodes = graph.nodes()
-        self._calculate_neighbours()
-        self._calculate_spins()
+        self.side = int(np.sqrt(self.number_of_nodes))
         # Implement physical quantities
+        self._calculate_neighbours()
         self.temperature = temperature
         self.j = j
         self.b = b
-        self._calculate_magnetisation()
-        self._calculate_energy()
         self.energies = []
         self.magnetisations = []
         # Implement graphical representation
@@ -33,12 +32,19 @@ class IsingNetwork:
                 indices_of_neighbours.append(j)
             self.neighbours.append(indices_of_neighbours)
 
-    def _calculate_spins(self):
+    def initialise_spins_hot(self):
         self.spins = np.random.choice([-1, 1], self.number_of_nodes)
+        self._calculate_magnetisation()
+        self._calculate_energy()
 
+    def initialise_spins_cold(self):
+        self.spins = np.full(self.number_of_nodes, 1)
+        self._calculate_magnetisation()
+        self._calculate_energy()
+        
     # Compute physical quantities
     def _calculate_magnetisation(self):
-        self.magnetisation = abs(sum(self.spins))
+        self.magnetisation = sum(self.spins)
 
     def _calculate_energy(self):
         neighbour_spins = 0
@@ -47,15 +53,15 @@ class IsingNetwork:
                 neighbour_spins += self.spins[i] * self.spins[j]
         self.energy = - self.j * neighbour_spins / 2 + self.b * sum(self.spins)
 
-    # Monte Carlo algorithm for reaching equilibrium
-    def reach_equilibrium(self, time_evolution):
+    # Metropolis algorithm scrool all the spins to flip
+    def evolution(self, time):
         self.field.append(self._compute_field())
-        for _ in range(time_evolution):
+        for _ in range(time):
             for i in range(self.number_of_nodes):
                 neighbour_spins = 0
                 for j in self.neighbours[i]:
                     neighbour_spins += self.spins[i] * self.spins[j]
-                delta_energy = 2.0 * self.j * neighbour_spins
+                delta_energy = 2.0 * self.j * neighbour_spins + 2 * self.b * neighbour_spins
                 transition_probability = np.exp(- delta_energy / self.temperature)
                 if delta_energy < 0 or transition_probability > np.random.rand():
                     self.spins[i] *= -1
@@ -64,30 +70,68 @@ class IsingNetwork:
             self._calculate_magnetisation()
             self.magnetisations.append(self.magnetisation)
             self.field.append(self._compute_field())
+    
+    # Glauber algorithm chooses randomly what spin to flip
+    def evolution_random(self, time):
+        self.field.append(self._compute_field())
+        choices = np.random.choice([i for i in range(self.number_of_nodes)], time)
+        for n in range(time):
+            i = choices[n]
+            neighbour_spins = 0
+            for j in self.neighbours[i]:
+                neighbour_spins += self.spins[i] * self.spins[j]
+            delta_energy = 2.0 * self.j * neighbour_spins + 2 * self.b * neighbour_spins
+            transition_probability = np.exp(- delta_energy / self.temperature)
+            if delta_energy < 0 or transition_probability > np.random.rand():
+                self.spins[i] *= -1
+                self.energy += delta_energy
+            self.energies.append(self.energy)
+            self._calculate_magnetisation()
+            self.magnetisations.append(self.magnetisation)
+            self.field.append(self._compute_field())
 
     # Get physical quantities
-    def plot_physics(self, name_file):
-        name = str(name_file)[:3]
+    def plot_physics(self):
+        energies = [energy / self.number_of_nodes for energy in self.energies]
+        magnetisations = [magnetisation / self.number_of_nodes for magnetisation in self.magnetisations]
+        name = "side" + str(self.side) + "_temp" + str(self.temperature)[-4:]
+        path = './equilibrium'
+        if not os.path.exists(path):
+            os.mkdir(path)
         fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-        axs[0].plot(self.energies)
+        axs[0].plot(energies)
         axs[0].set_title("Energies")
-        axs[1].plot(self.magnetisations)
+        axs[1].plot(magnetisations)
         axs[1].set_title("Magnetisations")
         fig.tight_layout(pad=2.0)
-        plt.savefig(f'equilibrium/equilibrium_{name}.pdf')
+        plt.savefig(path + f'/equilibrium_{name}.pdf')
+        plt.close()
 
-    def get_physics(self):
-        magnetisation_data = self.magnetisations[-50:]
-        energy_data = self.energies[-50:]
+    def get_physics(self, average_time):
+        self.evolution(average_time)
+        magnetisation_data = self.magnetisations[-average_time:]
+        energy_data = self.energies[-average_time:]
         magnetisation = np.mean(magnetisation_data)
         energy = np.mean(energy_data)
         magnetisation_square = np.mean([magnetisation * magnetisation for magnetisation in magnetisation_data])
         energy_square = np.mean([energy * energy for energy in energy_data])
         specific_heat = (energy_square - energy * energy) / self.temperature / self.temperature
         susceptibility = (magnetisation_square - magnetisation * magnetisation) / self.temperature
-        return energy, magnetisation, specific_heat, susceptibility
+        return energy / self.number_of_nodes, magnetisation / self.number_of_nodes, specific_heat / self.number_of_nodes, susceptibility / self.number_of_nodes
     
-    # Graphical representations of the network (only for square networks)
+    def get_physics_random(self, average_time):
+        self.evolution_random(average_time)
+        magnetisation_data = self.magnetisations[-average_time:]
+        energy_data = self.energies[-average_time:]
+        magnetisation = np.mean(magnetisation_data)
+        energy = np.mean(energy_data)
+        magnetisation_square = np.mean([magnetisation * magnetisation for magnetisation in magnetisation_data])
+        energy_square = np.mean([energy * energy for energy in energy_data])
+        specific_heat = (energy_square - energy * energy) / self.temperature / self.temperature
+        susceptibility = (magnetisation_square - magnetisation * magnetisation) / self.temperature
+        return energy / self.number_of_nodes, magnetisation / self.number_of_nodes, specific_heat / self.number_of_nodes, susceptibility / self.number_of_nodes
+
+    #Graphical representations of the network (only for square networks)
     def _compute_field(self):
         size = int(np.sqrt(self.number_of_nodes))
         field = np.zeros((size, size))
@@ -96,7 +140,7 @@ class IsingNetwork:
         return field
 
     def plot_network(self, index):
-        plt.imshow(self.field[index], cmap='binary', interpolation='nearest')
+        plt.imshow(self.field[index], cmap='binary')
         plt.axis("off")
         plt.title(f'time: {index * 10}')
         legend_handles = [
@@ -106,69 +150,148 @@ class IsingNetwork:
         plt.legend(handles=legend_handles, loc='upper left', bbox_to_anchor=(1.02, 1))
         plt.show()
 
-    def plot_network_animation(self, name_file):
-      name = str(name_file)[:3]
-      fig, ax = plt.subplots()
-      def animate(i):
-          ax.imshow(self.field[i], cmap='binary', interpolation='nearest')
-          ax.axis("off")
-          ax.set_title(f'temperature: {str(self.temperature)[:3]}, time: {i}')
-          legend_handles = [
-              pat.Patch(color='white', label='- 1'),
-              pat.Patch(color='black', label='+ 1')
-          ]
-          ax.legend(handles=legend_handles, loc='upper left', bbox_to_anchor=(1.02, 1))
-      animation = ani.FuncAnimation(fig, animate, frames=len(self.field), interval=100, repeat=False)
-      animation.save(f'sequence/temperature_{name}.gif')
+    def plot_network_animation(self):
+        name = "side" + str(self.side) + "_temp" + str(self.temperature)[-4:]
+        path = './sequence'
+        if not os.path.exists(path):
+            os.mkdir(path)
+        fig, ax = plt.subplots()
+        def animate(i):
+            ax.imshow(self.field[i], cmap='binary')
+            ax.axis("off")
+            ax.set_title(f'temperature: {str(self.temperature)[:4]}, time: {i}')
+            legend_handles = [
+                pat.Patch(color='white', label='- 1'),
+                pat.Patch(color='black', label='+ 1')
+            ]
+            ax.legend(handles=legend_handles, loc='upper left', bbox_to_anchor=(1.02, 1))
+        animation = ani.FuncAnimation(fig, animate, frames=len(self.field), interval=200, repeat=False)
+        animation.save(path + f'/sequence_{name}.gif')
 
-class IsingEnsemble:
-    def __init__(self, number_of_iterations, initial_temperature, final_temperature, number_of_steps, graph):
+class IsingPhaseTransition:
+    def __init__(self, graph, temperatures):
         self.graph = graph
         # Implement temperatures to scroll
-        self.temperatures = np.arange(initial_temperature, final_temperature, (final_temperature - initial_temperature) / number_of_steps)
-        self.number_of_iterations = number_of_iterations
+        self.temperatures = temperatures
         # Implement physical quantities
         self.energies = []
         self.magnetisations = []
+        self.magnetisations_abs = []
         self.specific_heats = []
         self.susceptibilities = []
-        self.uncertainty_critical_temperature = (final_temperature - initial_temperature) / number_of_steps
 
     # Compute phase transition
-    def phase_transitions(self):
+    def phase_transition(self, time, average_time):
         for temperature in tqdm(self.temperatures):
             ising = IsingNetwork(self.graph, temperature)
-            ising.reach_equilibrium(self.number_of_iterations)
-            e, m, h, s = ising.get_physics()
+            ising.initialise_spins_hot()
+            ising.evolution(time)
+            e, m, h, s = ising.get_physics(average_time)
             self.energies.append(e)
             self.magnetisations.append(m)
+            self.magnetisations_abs.append(abs(m))
             self.specific_heats.append(h)
             self.susceptibilities.append(s)
+            ising.plot_physics()
+
+    def phase_transition_random(self, time, average_time):
+        for temperature in tqdm(self.temperatures):
+            ising = IsingNetwork(self.graph, temperature)
+            ising.initialise_spins_hot()
+            ising.evolution_random(time)
+            e, m, h, s = ising.get_physics_random(average_time)
+            self.energies.append(e)
+            self.magnetisations.append(m)
+            self.magnetisations_abs.append(abs(m))
+            self.specific_heats.append(h)
+            self.susceptibilities.append(s)
+            ising.plot_physics()
+
+    # Compute ensemble phase transition
+    def phase_transition_ensemble(self, time, average_time):
+        for temperature in tqdm(self.temperatures):
+            energy = []
+            magnetisation = []
+            specific_heat = []
+            susceptibility = []
+            for _ in tqdm(range(10)):
+                ising = IsingNetwork(self.graph, temperature)
+                ising.initialise_spins_hot()
+                ising.evolution(time)
+                e, m, h, s = ising.get_physics(average_time)
+                energy.append(e)
+                magnetisation.append(m)
+                specific_heat.append(h)
+                susceptibility.append(s)
+            magnetisation = [abs(m) for m in magnetisation]
+            e = np.mean(energy)
+            m = np.mean(magnetisation)
+            h = np.mean(specific_heat)
+            s = np.mean(susceptibility)
+            self.energies.append(e)
+            self.magnetisations.append(m)
+            self.magnetisations_abs.append(abs(m))
+            self.specific_heats.append(h)
+            self.susceptibilities.append(s)
+            ising.plot_physics()
+
+    def phase_transition_ensemble_random(self, time, average_time):
+        for temperature in tqdm(self.temperatures):
+            energy = []
+            magnetisation = []
+            specific_heat = []
+            susceptibility = []
+            for _ in tqdm(range(10)):
+                ising = IsingNetwork(self.graph, temperature)
+                ising.initialise_spins_hot()
+                ising.evolution_random(time)
+                e, m, h, s = ising.get_physics_random(average_time)
+                energy.append(e)
+                magnetisation.append(m)
+                specific_heat.append(h)
+                susceptibility.append(s)
+            magnetisation = [abs(m) for m in magnetisation]
+            e = np.mean(energy)
+            m = abs(np.mean(magnetisation))
+            h = np.mean(specific_heat)
+            s = np.mean(susceptibility)
+            self.energies.append(e)
+            self.magnetisations.append(m)
+            self.magnetisations_abs.append(abs(m))
+            self.specific_heats.append(h)
+            self.susceptibilities.append(s)
+            ising.plot_physics()
 
     # Get physical quantities
-    def plot_physics(self, name_file):
+    def plot_physics(self):
+        self.name = "side" + str(int(np.sqrt(self.graph.number_of_nodes()))) + "_steps" + str(len(self.temperatures))
+        path = './phase_transition'
+        if not os.path.exists(path):
+            os.mkdir(path)
+        
         fig, axs = plt.subplots(2, 2, figsize=(10, 5))
-        axs[0, 0].plot(self.temperatures, self.energies),
-        axs[0, 0].scatter(self.temperatures, self.energies),
+        axs[0, 0].scatter(self.temperatures, self.energies)
         axs[0, 0].set_title("Energies")
-        axs[0, 1].plot(self.temperatures, self.magnetisations),
-        axs[0, 1].scatter(self.temperatures, self.magnetisations),
+        def m(x):
+            sinh_term = np.sinh(2 / x)
+            magnetisation = (1 - sinh_term ** (-4)) ** (1 / 8)
+            if x < 2.26918531421302:
+                return magnetisation
+            else:
+                return 0
+        x = np.linspace(min(self.temperatures), max(self.temperatures), 100)
+        y = list(map(m, x))
+        axs[0, 1].plot(x, y, color='red')
+        axs[0, 1].scatter(self.temperatures, self.magnetisations_abs)
         axs[0, 1].set_title("Magnetisations")
-        axs[1, 0].plot(self.temperatures, self.specific_heats),
-        axs[1, 0].scatter(self.temperatures, self.specific_heats),
+        axs[1, 0].scatter(self.temperatures, self.specific_heats)
         axs[1, 0].set_title("Specific heats")
-        axs[1, 1].plot(self.temperatures, self.susceptibilities),
-        axs[1, 1].scatter(self.temperatures, self.susceptibilities),
+        axs[1, 1].scatter(self.temperatures, self.susceptibilities)
         axs[1, 1].set_title("Susceptibilities")
+
         fig.tight_layout(pad=2.0)
-        plt.savefig(f'phase_transition/plot_{name_file}.pdf')
+        plt.savefig(path + f'/phase_transition_{self.name}.pdf')
+        plt.close()
 
-    def get_critical_temperature(self):
-        index_max_susceptibility = self.susceptibilities.index(max(self.susceptibilities))
-        critical_temperature_susceptibility = self.temperatures[index_max_susceptibility]
-
-        index_max_specific_heat = self.specific_heats.index(max(self.specific_heats))
-        critical_temperature_specific_heat = self.temperatures[index_max_specific_heat]
-
-        print("Critical temperature for susceptibilities:", critical_temperature_susceptibility, "+/-", self.uncertainty_critical_temperature)
-        print("Critical temperature for specific heats:", critical_temperature_specific_heat, "+/-", self.uncertainty_critical_temperature)
+        print(self.temperatures[self.specific_heats.index(max(self.specific_heats))])
+        print(self.temperatures[self.susceptibilities.index(max(self.susceptibilities))])
