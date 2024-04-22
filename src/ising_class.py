@@ -4,7 +4,7 @@ import networkx as nx
 import numpy as np
 import pickle
 import os
-from num_int import One, Square, Triangular, Hexagonal
+from num_int import ExactSolutionIsing
 
 class IsingNetwork:
     def __init__(self, kind_of_graph, side):
@@ -14,14 +14,27 @@ class IsingNetwork:
         self.path_data = './data'
         if not os.path.exists(self.path_data):
             os.mkdir(self.path_data)
-        self.path_data = './data/' + self.kind_of_graph
+        self.path_data = './data/data_graph'
         if not os.path.exists(self.path_data):
             os.mkdir(self.path_data)
+        self.path_data = './data/data_graph/' + self.kind_of_graph
+        if not os.path.exists(self.path_data):
+            os.mkdir(self.path_data)
+
+        self.path_data_eq = './data/data_equilibrium'
+        if not os.path.exists(self.path_data_eq):
+            os.mkdir(self.path_data_eq)
+        self.path_data_eq = './data/data_equilibrium/' + self.kind_of_graph
+        if not os.path.exists(self.path_data_eq):
+            os.mkdir(self.path_data_eq)
 
         self.path_plot = './plot'
         if not os.path.exists(self.path_plot):
             os.mkdir(self.path_plot)
-        self.path_plot = './plot/' + self.kind_of_graph
+        self.path_plot = './plot/plot_equilibrium'
+        if not os.path.exists(self.path_plot):
+            os.mkdir(self.path_plot)
+        self.path_plot = './plot/plot_equilibrium/' + self.kind_of_graph
         if not os.path.exists(self.path_plot):
             os.mkdir(self.path_plot)
 
@@ -35,6 +48,8 @@ class IsingNetwork:
             self.graph =  nx.triangular_lattice_graph(self.side, self.side, periodic=True)
         elif self.kind_of_graph == "2d_hexagonal":
             self.graph =  nx.hexagonal_lattice_graph(self.side, self.side, periodic=True)
+        elif self.kind_of_graph == "4d":
+            self.graph =  nx.grid_graph([self.side, self.side, self.side, self.side])
         self.number_of_nodes = self.graph.number_of_nodes()
 
         graph_path = self.path_data + '/side' + str(self.side) + '_graph.pickle'
@@ -91,7 +106,7 @@ class IsingNetwork:
     def _calculate_neighbours(self):
         self.neighbours = []
         list_of_nodes = list(self.nodes)
-        for node in self.nodes:
+        for node in tqdm(self.nodes):
             indices_of_neighbours = []
             for neighbour_of_node in self.graph.neighbors(node):
                 j = list_of_nodes.index(neighbour_of_node)
@@ -149,20 +164,20 @@ class IsingNetwork:
 
     # Save data
     def save_data(self):
-        energy_path = self.path_data + '/side' + str(self.side) + '_temp' + str(float(self.temperature))[-5:] + '_equilibrium_energy.pickle'
+        energy_path = self.path_data_eq + '/side' + str(self.side) + '_temp' + str(float(self.temperature))[-5:] + '_energy.pickle'
         with open(energy_path, 'wb') as f:
             pickle.dump(self.energies, f)
         
-        magnetisation_path = self.path_data + '/side' + str(self.side) + '_temp' + str(float(self.temperature))[-5:] + '_equilibrium_magnetisation.pickle'
+        magnetisation_path = self.path_data_eq + '/side' + str(self.side) + '_temp' + str(float(self.temperature))[-5:] + '_magnetisation.pickle'
         with open(magnetisation_path, 'wb') as f:
             pickle.dump(self.magnetisations, f)
 
     # Load data
     def load_data(self):
-        energy_path = self.path_data + '/side' + str(self.side) + '_temp' + str(float(self.temperature))[-5:] + '_equilibrium_energy.pickle'
+        energy_path = self.path_data_eq + '/side' + str(self.side) + '_temp' + str(float(self.temperature))[-5:] + '_energy.pickle'
         with open(energy_path, 'rb') as f:
             self.energies = pickle.load(f)
-        magnetisation_path = self.path_data + '/side' + str(self.side) + '_temp' + str(float(self.temperature))[-5:] + '_equilibrium_magnetisation.pickle'
+        magnetisation_path = self.path_data_eq + '/side' + str(self.side) + '_temp' + str(float(self.temperature))[-5:] + '_magnetisation.pickle'
         with open(magnetisation_path, 'rb') as f:
             self.magnetisations = pickle.load(f)
 
@@ -177,7 +192,7 @@ class IsingNetwork:
         axs[1].plot(magnetisations)
         axs[1].set_title("Magnetisations")
         fig.tight_layout(pad=2.0)
-        plt.savefig(self.path_plot + '/side' + str(self.side) + '_temp' + str(float(self.temperature))[-5:] + '_equilibrium.pdf')
+        plt.savefig(self.path_plot + '/side' + str(self.side) + '_temp' + str(float(self.temperature))[-5:] + '.pdf')
         plt.close()
 
     # Get physical quantities
@@ -197,7 +212,7 @@ class IsingNetwork:
         specific_heat = (energy_square - energy**2) / self.temperature / self.temperature
         susceptibility = (magnetisation_square - magnetisation**2) / self.temperature
 
-        return energy, magnetisation, specific_heat, susceptibility 
+        return energy, magnetisation, specific_heat * self.number_of_nodes, susceptibility 
 
 class IsingPhaseTransition:
     def __init__(self, kind_of_graph, side):
@@ -207,14 +222,20 @@ class IsingPhaseTransition:
         self.path_data = './data'
         if not os.path.exists(self.path_data):
             os.mkdir(self.path_data)
-        self.path_data = './data/' + self.kind_of_graph
+        self.path_data = './data/data_phase_transition'
+        if not os.path.exists(self.path_data):
+            os.mkdir(self.path_data)
+        self.path_data = './data/data_phase_transition/' + self.kind_of_graph
         if not os.path.exists(self.path_data):
             os.mkdir(self.path_data)
 
         self.path_plot = './plot'
         if not os.path.exists(self.path_plot):
+            os.mkdir(self.path_plot)    
+        self.path_plot = './plot/plot_phase_transition'
+        if not os.path.exists(self.path_plot):
             os.mkdir(self.path_plot)
-        self.path_plot = './plot/' + self.kind_of_graph
+        self.path_plot = './plot/plot_phase_transition/' + self.kind_of_graph
         if not os.path.exists(self.path_plot):
             os.mkdir(self.path_plot)
     
@@ -241,72 +262,63 @@ class IsingPhaseTransition:
 
     # Save data
     def save_data(self):
-        energy_path = self.path_data + '/side' + str(self.side) + '_phase_transition_energies.pickle'
+        energy_path = self.path_data + '/side' + str(self.side) + '_energies.pickle'
         with open(energy_path, 'wb') as f:
             pickle.dump(self.energies, f)
         
-        magnetisation_path = self.path_data + '/side' + str(self.side) + '_phase_transition_magnetisations.pickle'
+        magnetisation_path = self.path_data + '/side' + str(self.side) + '_magnetisations.pickle'
         with open(magnetisation_path, 'wb') as f:
             pickle.dump(self.magnetisations, f)
 
-        specific_heat_path = self.path_data + '/side' + str(self.side) + '_phase_transition_specific_heats.pickle'
+        specific_heat_path = self.path_data + '/side' + str(self.side) + '_specific_heats.pickle'
         with open(specific_heat_path, 'wb') as f:
             pickle.dump(self.specific_heats, f)
 
-        susceptibility_path = self.path_data + '/side' + str(self.side) + '_phase_transition_susceptibilities.pickle'
+        susceptibility_path = self.path_data + '/side' + str(self.side) + '_susceptibilities.pickle'
         with open(susceptibility_path, 'wb') as f:
             pickle.dump(self.susceptibilities, f)
 
     # Load data
     def load_data(self):
-        energy_path = self.path_data + '/side' + str(self.side)  + '_phase_transition_energies.pickle'
+        energy_path = self.path_data + '/side' + str(self.side)  + '_energies.pickle'
         with open(energy_path, 'rb') as f:
             self.energies = pickle.load(f)
 
-        magnetisation_path = self.path_data + '/side' + str(self.side) + '_phase_transition_magnetisations.pickle'
+        magnetisation_path = self.path_data + '/side' + str(self.side) + '_magnetisations.pickle'
         with open(magnetisation_path, 'rb') as f:
             self.magnetisations = pickle.load(f)
 
-        specific_heat_path = self.path_data + '/side' + str(self.side) + '_phase_transition_specific_heats.pickle'
+        specific_heat_path = self.path_data + '/side' + str(self.side) + '_specific_heats.pickle'
         with open(specific_heat_path, 'rb') as f:                      
             self.specific_heats = pickle.load(f)
 
-        susceptibility_path = self.path_data + '/side' + str(self.side) + '_phase_transition_susceptibilities.pickle'
+        susceptibility_path = self.path_data + '/side' + str(self.side) + '_susceptibilities.pickle'
         with open(susceptibility_path, 'rb') as f:
             self.susceptibilities = pickle.load(f)
 
     def plot_physics(self):    
-        if self.kind_of_graph == "1d":
-            one_data = One()
-            T, F, U, M = one_data.load_1d_data()
-        elif self.kind_of_graph == "2d_square":
-            square_data = Square()
-            T, F, U, M = square_data.load_square_data()
-        elif self.kind_of_graph == "2d_triangular":
-            triangular_data = Triangular()
-            T, F, U, M = triangular_data.load_triangular_data()
-        elif self.kind_of_graph == "2d_hexagonal":
-            hexagonal_data = Hexagonal()
-            T, F, U, M = hexagonal_data.load_hexagonal_data()
-        
+        data = ExactSolutionIsing(self.kind_of_graph)
+        T, F, U, M, C = data.load_data()
+
         plt.scatter(self.temperatures, self.energies)
         plt.plot(T, U, color='red')
         plt.title("Energies")
-        plt.savefig(self.path_plot + '/side' + str(self.side) + '_phase_transition_energies.pdf')
+        plt.savefig(self.path_plot + '/side' + str(self.side) + '_energies.pdf')
         plt.close()
 
         plt.scatter(self.temperatures, self.magnetisations)
         plt.plot(T, M, color='red')
         plt.title("Magnetisations")
-        plt.savefig(self.path_plot + '/side' + str(self.side) + '_phase_transition_magnetisations.pdf')
+        plt.savefig(self.path_plot + '/side' + str(self.side) + '_magnetisations.pdf')
         plt.close()
 
         plt.scatter(self.temperatures, self.specific_heats)
+        plt.plot(T[2:-2], C, color='red')
         plt.title("Specific heats")
-        plt.savefig(self.path_plot + '/side' + str(self.side) + '_phase_transition_specific_heats.pdf')
+        plt.savefig(self.path_plot + '/side' + str(self.side) + '_specific_heats.pdf')
         plt.close()
 
         plt.scatter(self.temperatures, self.susceptibilities)
         plt.title("Susceptibilities")
-        plt.savefig(self.path_plot + '/side' + str(self.side) + '_phase_transition_susceptibilities.pdf')
+        plt.savefig(self.path_plot + '/side' + str(self.side) + '_susceptibilities.pdf')
         plt.close()
