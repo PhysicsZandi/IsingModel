@@ -10,6 +10,11 @@ class ExactSolutionIsing:
     def __init__(self, kind_of_graph):
         # Implement different graphs
         self.kind_of_graph = kind_of_graph
+
+        # Implement temperatures
+        self.temperatures = [0.2 + 0.2 * i for i in range(20)]
+
+        # Implement paths to save/load data
         self.path_data = './data'
         if not os.path.exists(self.path_data):
             os.mkdir(self.path_data)
@@ -19,21 +24,19 @@ class ExactSolutionIsing:
         self.path_data = './data/data_exact_solutions/' + self.kind_of_graph
         if not os.path.exists(self.path_data):
             os.mkdir(self.path_data)
-        self.temperatures = [0.001 + 0.001 * i for i in range(5000)]
 
-    # Numerical integration and derivation of physical quantities
-    def compute_physics(self):
-        if self.kind_of_graph == "1d":
-            self.compute_physics_1d()
-        elif self.kind_of_graph == "2d_square":
-            self.compute_physics_square()
-        elif self.kind_of_graph == "2d_triangular":
-            self.compute_physics_triangular()
-        elif self.kind_of_graph == "2d_hexagonal":
-            self.compute_physics_hexagonal()
-        elif self.kind_of_graph == "4d":
-            self.compute_physics_4d()
+        # Implement paths to save/load plots
+        self.path_plot = './plot'
+        if not os.path.exists(self.path_plot):
+            os.mkdir(self.path_plot)
+        self.path_plot = './plot/plot_exact_solutions'
+        if not os.path.exists(self.path_plot):
+            os.mkdir(self.path_plot)
+        self.path_plot = './plot/plot_exact_solutions/' + self.kind_of_graph
+        if not os.path.exists(self.path_plot):
+            os.mkdir(self.path_plot)
 
+    # Calculate 1d physical quantities
     def free_energy_1d(self, T):
         free_energy = - T * np.log(2 * np.cosh(1 / T))
         return free_energy
@@ -44,7 +47,8 @@ class ExactSolutionIsing:
     
     def magnetisation_1d(self, T):
         return 0
-    
+ 
+    # Calculate 2d square physical quantities with symbolic derivation and numerical integration
     def symbolic_derivative_square(self):
         x = sp.Symbol("x")
         y = sp.Symbol("y")
@@ -53,6 +57,7 @@ class ExactSolutionIsing:
 
         symbolic_P_square = sp.cosh(2 / T)**2 - sp.sinh(2 / T) * (sp.cos(x) + sp.cos(y))
         symbolic_P_square = sp.simplify(symbolic_P_square)
+
         symbolic_dP_square = symbolic_P_square.diff(T)
         symbolic_dP_square = sp.simplify(symbolic_dP_square)
 
@@ -77,7 +82,8 @@ class ExactSolutionIsing:
             return magnetisation
         else:
             return 0
-    
+
+    # Calculate 2d triangular physical quantities with symbolic derivation and numerical integration
     def symbolic_derivative_triangular(self):
         x = sp.Symbol("x")
         y = sp.Symbol("y")
@@ -86,6 +92,7 @@ class ExactSolutionIsing:
 
         symbolic_P_triangular = sp.cosh(2 / T)**3 + sp.sinh(2 / T)**3 - sp.sinh(2 / T) * (sp.cos(x) + sp.cos(y) + sp.cos(z))
         symbolic_P_triangular = sp.simplify(symbolic_P_triangular)
+
         symbolic_dP_triangular = symbolic_P_triangular.diff(T)
         symbolic_dP_triangular = sp.simplify(symbolic_dP_triangular)
 
@@ -110,15 +117,18 @@ class ExactSolutionIsing:
             return magnetisation
         else:
             return 0
-        
+
+    
+    # Calculate 2d hexagonal physical quantities with symbolic derivation and numerical integration
     def symbolic_derivative_hexagonal(self):
         x = sp.Symbol("x")
         y = sp.Symbol("y")
         z = sp.Symbol("z")
         T = sp.Symbol("T")
 
-        symbolic_P_hexagonal = 1 / 2 * (1 + sp.cosh(2 / T)**3 - sp.sinh(2 / T)**2 * (sp.cos(x) + sp.cos(y))+ + sp.cos(z))
+        symbolic_P_hexagonal = 0.5 * (1 + sp.cosh(2 / T)**3 - sp.sinh(2 / T)**2 * (sp.cos(x) + sp.cos(y) + sp.cos(z)))
         symbolic_P_hexagonal = sp.simplify(symbolic_P_hexagonal)
+
         symbolic_dP_hexagonal  = symbolic_P_hexagonal.diff(T)
         symbolic_dP_hexagonal = sp.simplify(symbolic_dP_hexagonal)
 
@@ -143,18 +153,19 @@ class ExactSolutionIsing:
             return magnetisation
         else:
             return 0
-        
-    def free_energy_4d(self, T):
+
+    # Calculate mean field physical quantities with numerical root finding
+    def free_energy_mean_field(self, T):
         d = 4
         z = 2 * d 
-        m = self.magnetisation_4d(T)
+        m = self.magnetisation_mean_field(T)
         free_energy = m**2 * z / 2 - T * np.log(2 * np.cosh(z * m / T))
         return free_energy
 
-    def internal_energy_4d(self, T):
+    def internal_energy_mean_field(self, T):
         d = 4
         z = 2 * d 
-        m = self.magnetisation_4d(T)
+        m = self.magnetisation_mean_field(T)
         internal_energy = - z * m**2 / 2
         return internal_energy
     
@@ -163,7 +174,7 @@ class ExactSolutionIsing:
         z = 2 * d 
         return np.tanh (z * x / self.T) - x
     
-    def magnetisation_4d(self, T):
+    def magnetisation_mean_field(self, T):
         d = 4
         z = 2 * d 
         T_c = z
@@ -174,6 +185,7 @@ class ExactSolutionIsing:
         else:
             return 0
         
+    # Calculate specific heat with five point formula
     def specific_heat(self, temperatures, internal_energies):
         indices = [i + 2 for i in range(len(temperatures) - 4)]
         specific_heats = []
@@ -181,128 +193,217 @@ class ExactSolutionIsing:
             derivative = (internal_energies[i - 2] - 8 * internal_energies[i - 1] + 8 * internal_energies[i + 1] - internal_energies[i + 2]) / 12 / (temperatures[i] - temperatures[i - 1])
             specific_heats.append(derivative)
         return specific_heats
+    
+    # Calculate entropy
+    def entropy(self, temperatures, internal_energies, free_energies):
+        index = [int(i) for i in range(len(temperatures))]
+        entropy = []
+        for i in index:
+            s = (internal_energies[i] - free_energies[i]) / temperatures[i]
+            entropy.append(s)
+        return entropy
+
+    # Calculate physical quantities
+    def compute_physics(self):
+        if self.kind_of_graph == "1d":
+            self.compute_physics_1d()
+        elif self.kind_of_graph == "2d_square":
+            self.compute_physics_square()
+        elif self.kind_of_graph == "2d_triangular":
+            self.compute_physics_triangular()
+        elif self.kind_of_graph == "2d_hexagonal":
+            self.compute_physics_hexagonal()
+        elif self.kind_of_graph == "4d":
+            self.compute_physics_mean_field()
 
     def compute_physics_1d(self):
         self.free_energy = []
         for i in tqdm(range(len(self.temperatures))):
             self.free_energy.append(self.free_energy_1d(self.temperatures[i]))
+
         self.internal_energy = []
         for i in tqdm(range(len(self.temperatures))):
             self.internal_energy.append(self.internal_energy_1d(self.temperatures[i]))
+
         self.magnetisation = []
         for i in tqdm(range(len(self.temperatures))):
             self.magnetisation.append(self.magnetisation_1d(self.temperatures[i]))
+
         self.specific_heat = self.specific_heat(self.temperatures, self.internal_energy)
+
+        self.entropy = self.entropy(self.temperatures, self.internal_energy, self.free_energy)
 
     def compute_physics_square(self):
         self.symbolic_derivative_square()
+
         self.free_energy = []
         for i in tqdm(range(len(self.temperatures))):
             self.free_energy.append(self.free_energy_square(self.temperatures[i]))
+
         self.internal_energy = []
         for i in tqdm(range(len(self.temperatures))):
             self.internal_energy.append(self.internal_energy_square(self.temperatures[i]))
+
         self.magnetisation = []
         for i in tqdm(range(len(self.temperatures))):
             self.magnetisation.append(self.magnetisation_square(self.temperatures[i]))
+
         self.specific_heat = self.specific_heat(self.temperatures, self.internal_energy)
+
+        self.entropy = self.entropy(self.temperatures, self.internal_energy, self.free_energy)
 
     def compute_physics_triangular(self):
         self.symbolic_derivative_triangular()
+
         self.free_energy = []
         for i in tqdm(range(len(self.temperatures))):
             self.free_energy.append(self.free_energy_triangular(self.temperatures[i]))
+
         self.internal_energy = []
         for i in tqdm(range(len(self.temperatures))):
             self.internal_energy.append(self.internal_energy_triangular(self.temperatures[i]))
+
         self.magnetisation = []
         for i in tqdm(range(len(self.temperatures))):
             self.magnetisation.append(self.magnetisation_triangular(self.temperatures[i]))
+
         self.specific_heat = self.specific_heat(self.temperatures, self.internal_energy)
+
+        self.entropy = self.entropy(self.temperatures, self.internal_energy, self.free_energy)
 
     def compute_physics_hexagonal(self):
         self.symbolic_derivative_hexagonal()
+
         self.free_energy = []
         for i in tqdm(range(len(self.temperatures))):
             self.free_energy.append(self.free_energy_hexagonal(self.temperatures[i]))
+
         self.internal_energy = []
         for i in tqdm(range(len(self.temperatures))):
             self.internal_energy.append(self.internal_energy_hexagonal(self.temperatures[i]))
+            
         self.magnetisation = []
         for i in tqdm(range(len(self.temperatures))):
             self.magnetisation.append(self.magnetisation_hexagonal(self.temperatures[i]))
+
         self.specific_heat = self.specific_heat(self.temperatures, self.internal_energy)
 
-    def compute_physics_4d(self):
+        self.entropy = self.entropy(self.temperatures, self.internal_energy, self.free_energy)
+
+    def compute_physics_mean_field(self):
         self.free_energy = []
         for i in tqdm(range(len(self.temperatures))):
-            self.free_energy.append(self.free_energy_4d(self.temperatures[i]))
+            self.free_energy.append(self.free_energy_mean_field(self.temperatures[i]))
+
         self.internal_energy = []
         for i in tqdm(range(len(self.temperatures))):
-            self.internal_energy.append(self.internal_energy_4d(self.temperatures[i]))
+            self.internal_energy.append(self.internal_energy_mean_field(self.temperatures[i]))
+
         self.magnetisation = []
         for i in tqdm(range(len(self.temperatures))):
-            self.magnetisation.append(self.magnetisation_4d(self.temperatures[i]))
+            self.magnetisation.append(self.magnetisation_mean_field(self.temperatures[i]))
+
         self.specific_heat = self.specific_heat(self.temperatures, self.internal_energy)
+
+        self.entropy = self.entropy(self.temperatures, self.internal_energy, self.free_energy)
 
     # Save data with pickle
     def save_data(self):
         temperatures_path = self.path_data + '/temperatures.pickle'
         with open(temperatures_path, 'wb') as f:
             pickle.dump(self.temperatures, f)
+
         free_energy_path = self.path_data + '/free_energy.pickle'
         with open(free_energy_path, 'wb') as f:
             pickle.dump(self.free_energy, f)
+
         internal_energy_path = self.path_data + '/internal_energy.pickle'
         with open(internal_energy_path, 'wb') as f:
             pickle.dump(self.internal_energy, f)
+
         magnetisation_path = self.path_data + '/magnetisation.pickle'
         with open(magnetisation_path, 'wb') as f:
             pickle.dump(self.magnetisation, f)
+
         specific_heat_path = self.path_data + '/specific_heat.pickle'
         with open(specific_heat_path, 'wb') as f:
             pickle.dump(self.specific_heat, f)
+
+        entropy_path = self.path_data + '/entropy.pickle'
+        with open(entropy_path, 'wb') as f:
+            pickle.dump(self.entropy, f)
 
     # Load data with pickle
     def load_data(self):
         temperatures_path = self.path_data + '/temperatures.pickle'
         with open(temperatures_path, 'rb') as f:
             temperatures = pickle.load(f)
+
         free_energy_path = self.path_data + '/free_energy.pickle'
         with open(free_energy_path, 'rb') as f:
             free_energy = pickle.load(f)
+
         internal_energy_path = self.path_data + '/internal_energy.pickle'
         with open(internal_energy_path, 'rb') as f:
             internal_energy = pickle.load(f)
+
         magnetisation_path = self.path_data + '/magnetisation.pickle'
         with open(magnetisation_path, 'rb') as f:
             magnetisation = pickle.load(f)
+
         specific_heat_path = self.path_data + '/specific_heat.pickle'
         with open(specific_heat_path, 'rb') as f:
             specific_heat = pickle.load(f)
-        return temperatures, free_energy, internal_energy, magnetisation, specific_heat
+
+        entropy_path = self.path_data + '/entropy.pickle'
+        with open(entropy_path, 'rb') as f:
+            entropy = pickle.load(f)
+
+        return temperatures, free_energy, internal_energy, magnetisation, specific_heat, entropy
 
     # Plot data
     def plot_data(self):
-        temperatures, free_energy, internal_energy, magnetisation, specific_heat = self.load_data()
-        fig, axs = plt.subplots(2, 2, figsize=(10, 5))
-        axs[0, 0].plot(temperatures, free_energy)
-        axs[0, 0].set_title("Free energy")
-        axs[0, 1].plot(temperatures, internal_energy)
-        axs[0, 1].set_title("Internal energy")
-        axs[1, 0].plot(temperatures, magnetisation)
-        axs[1, 0].set_title("Magnetisation")
-        axs[1, 1].plot(temperatures[2:-2], specific_heat)
-        axs[1, 1].set_title("Specific heat")
-        plt.show()
+        T, F, E, M, C, S = self.load_data()
 
-# Complete run for saving data
+        plt.title("Theoretical prediction over temperature in a " + self.kind_of_graph + " graph")
+        plt.plot(T, F)
+        plt.ylabel("Free energy")
+        plt.xlabel("Temperature")
+        plt.savefig(self.path_plot + '/free_energy.pdf')
+        plt.close()
+
+        plt.title("Theoretical prediction over temperature in a " + self.kind_of_graph + " graph")
+        plt.plot(T, E)
+        plt.ylabel("Internal energy")
+        plt.xlabel("Temperature")
+        plt.savefig(self.path_plot + '/internal_energy.pdf')
+        plt.close()
+
+        plt.title("Theoretical prediction over temperature in a " + self.kind_of_graph + " graph")
+        plt.plot(T, M)
+        plt.ylabel("Magnetisation")
+        plt.xlabel("Temperature")
+        plt.savefig(self.path_plot + '/magnetisation.pdf')
+        plt.close()
+
+        plt.title("Theoretical prediction over temperature in a " + self.kind_of_graph + " graph")
+        plt.plot(T[2:-2], C)
+        plt.ylabel("Specific heat")
+        plt.xlabel("Temperature")
+        plt.savefig(self.path_plot + '/specific_heat.pdf')
+        plt.close()
+
+        plt.title("Theoretical prediction over temperature in a " + self.kind_of_graph + " graph")
+        plt.plot(T, S)
+        plt.ylabel("Entropy")
+        plt.xlabel("Temperature")
+        plt.savefig(self.path_plot + '/entropy.pdf')
+        plt.close()
+
 def run():
-    kinds_of_graph = ["1d", "4d"]
-    for kind_of_graph in kinds_of_graph:
-        ising = ExactSolutionIsing(kind_of_graph)
-        ising.compute_physics()
-        ising.save_data()
-        #ising.plot_data()
+    ising = ExactSolutionIsing("2d_hexagonal")
+    ising.compute_physics()
+    ising.save_data()
+    ising.plot_data()
 
 #run()
