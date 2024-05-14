@@ -12,16 +12,16 @@ class ExactSolutionIsing:
         self.kind_of_graph = kind_of_graph
 
         # Implement temperatures
-        self.temperatures = [0.2 + 0.2 * i for i in range(20)]
+        self.temperatures = [0.05 + 0.05 * i for i in range(200)]
 
         # Implement paths to save/load data
         self.path_data = './data'
         if not os.path.exists(self.path_data):
             os.mkdir(self.path_data)
-        self.path_data = './data/data_exact_solutions'
+        self.path_data = './data/exact_solutions'
         if not os.path.exists(self.path_data):
             os.mkdir(self.path_data)
-        self.path_data = './data/data_exact_solutions/' + self.kind_of_graph
+        self.path_data = './data/exact_solutions/' + self.kind_of_graph
         if not os.path.exists(self.path_data):
             os.mkdir(self.path_data)
 
@@ -29,10 +29,10 @@ class ExactSolutionIsing:
         self.path_plot = './plot'
         if not os.path.exists(self.path_plot):
             os.mkdir(self.path_plot)
-        self.path_plot = './plot/plot_exact_solutions'
+        self.path_plot = './plot/exact_solutions'
         if not os.path.exists(self.path_plot):
             os.mkdir(self.path_plot)
-        self.path_plot = './plot/plot_exact_solutions/' + self.kind_of_graph
+        self.path_plot = './plot/exact_solutions/' + self.kind_of_graph
         if not os.path.exists(self.path_plot):
             os.mkdir(self.path_plot)
 
@@ -118,7 +118,6 @@ class ExactSolutionIsing:
         else:
             return 0
 
-    
     # Calculate 2d hexagonal physical quantities with symbolic derivation and numerical integration
     def symbolic_derivative_hexagonal(self):
         x = sp.Symbol("x")
@@ -317,7 +316,7 @@ class ExactSolutionIsing:
         with open(free_energy_path, 'wb') as f:
             pickle.dump(self.free_energy, f)
 
-        internal_energy_path = self.path_data + '/internal_energy.pickle'
+        internal_energy_path = self.path_data + '/energy.pickle'
         with open(internal_energy_path, 'wb') as f:
             pickle.dump(self.internal_energy, f)
 
@@ -343,7 +342,7 @@ class ExactSolutionIsing:
         with open(free_energy_path, 'rb') as f:
             free_energy = pickle.load(f)
 
-        internal_energy_path = self.path_data + '/internal_energy.pickle'
+        internal_energy_path = self.path_data + '/energy.pickle'
         with open(internal_energy_path, 'rb') as f:
             internal_energy = pickle.load(f)
 
@@ -365,35 +364,35 @@ class ExactSolutionIsing:
     def plot_data(self):
         T, F, E, M, C, S = self.load_data()
 
-        plt.title("Theoretical prediction over temperature in a " + self.kind_of_graph + " graph")
+        plt.title("Theoretical prediction in a " + self.kind_of_graph + " graph")
         plt.plot(T, F)
         plt.ylabel("Free energy")
         plt.xlabel("Temperature")
         plt.savefig(self.path_plot + '/free_energy.pdf')
         plt.close()
 
-        plt.title("Theoretical prediction over temperature in a " + self.kind_of_graph + " graph")
+        plt.title("Theoretical prediction in a " + self.kind_of_graph + " graph")
         plt.plot(T, E)
         plt.ylabel("Internal energy")
         plt.xlabel("Temperature")
-        plt.savefig(self.path_plot + '/internal_energy.pdf')
+        plt.savefig(self.path_plot + '/energy.pdf')
         plt.close()
 
-        plt.title("Theoretical prediction over temperature in a " + self.kind_of_graph + " graph")
+        plt.title("Theoretical prediction in a " + self.kind_of_graph + " graph")
         plt.plot(T, M)
         plt.ylabel("Magnetisation")
         plt.xlabel("Temperature")
         plt.savefig(self.path_plot + '/magnetisation.pdf')
         plt.close()
 
-        plt.title("Theoretical prediction over temperature in a " + self.kind_of_graph + " graph")
+        plt.title("Theoretical prediction in a " + self.kind_of_graph + " graph")
         plt.plot(T[2:-2], C)
         plt.ylabel("Specific heat")
         plt.xlabel("Temperature")
         plt.savefig(self.path_plot + '/specific_heat.pdf')
         plt.close()
 
-        plt.title("Theoretical prediction over temperature in a " + self.kind_of_graph + " graph")
+        plt.title("Theoretical prediction in a " + self.kind_of_graph + " graph")
         plt.plot(T, S)
         plt.ylabel("Entropy")
         plt.xlabel("Temperature")
@@ -401,9 +400,9 @@ class ExactSolutionIsing:
         plt.close()
 
 def run():
-    ising = ExactSolutionIsing("2d_hexagonal")
+    ising = ExactSolutionIsing("2d_triangular")
     ising.compute_physics()
     ising.save_data()
     ising.plot_data()
 
-#run()
+run()
