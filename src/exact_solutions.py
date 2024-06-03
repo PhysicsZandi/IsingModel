@@ -153,37 +153,6 @@ class ExactSolutionIsing:
         else:
             return 0
 
-    # Calculate mean field physical quantities with numerical root finding
-    def free_energy_mean_field(self, T):
-        d = 4
-        z = 2 * d 
-        m = self.magnetisation_mean_field(T)
-        free_energy = m**2 * z / 2 - T * np.log(2 * np.cosh(z * m / T))
-        return free_energy
-
-    def internal_energy_mean_field(self, T):
-        d = 4
-        z = 2 * d 
-        m = self.magnetisation_mean_field(T)
-        internal_energy = - z * m**2 / 2
-        return internal_energy
-    
-    def m(self, x):
-        d = 4
-        z = 2 * d 
-        return np.tanh (z * x / self.T) - x
-    
-    def magnetisation_mean_field(self, T):
-        d = 4
-        z = 2 * d 
-        T_c = z
-        if T < T_c:
-            self.T = T
-            solution = sci.optimize.root_scalar(self.m, bracket=[0.01, 1], method='brentq')
-            return solution.root
-        else:
-            return 0
-        
     # Calculate specific heat with five point formula
     def specific_heat(self, temperatures, internal_energies):
         indices = [i + 2 for i in range(len(temperatures) - 4)]
@@ -289,23 +258,6 @@ class ExactSolutionIsing:
 
         self.entropy = self.entropy(self.temperatures, self.internal_energy, self.free_energy)
 
-    def compute_physics_mean_field(self):
-        self.free_energy = []
-        for i in tqdm(range(len(self.temperatures))):
-            self.free_energy.append(self.free_energy_mean_field(self.temperatures[i]))
-
-        self.internal_energy = []
-        for i in tqdm(range(len(self.temperatures))):
-            self.internal_energy.append(self.internal_energy_mean_field(self.temperatures[i]))
-
-        self.magnetisation = []
-        for i in tqdm(range(len(self.temperatures))):
-            self.magnetisation.append(self.magnetisation_mean_field(self.temperatures[i]))
-
-        self.specific_heat = self.specific_heat(self.temperatures, self.internal_energy)
-
-        self.entropy = self.entropy(self.temperatures, self.internal_energy, self.free_energy)
-
     # Save data with pickle
     def save_data(self):
         temperatures_path = self.path_data + '/temperatures.pickle'
@@ -399,10 +351,15 @@ class ExactSolutionIsing:
         plt.savefig(self.path_plot + '/entropy.pdf')
         plt.close()
 
+##### RUN #####
+
+# Possible choices are "1d", "2d_square", "2d_triangular", "2d_hexagonal"
+kind_of_graph = "1d"
+
 def run():
-    ising = ExactSolutionIsing("2d_triangular")
+    ising = ExactSolutionIsing(kind_of_graph)
     ising.compute_physics()
     ising.save_data()
     ising.plot_data()
 
-run()
+#run()

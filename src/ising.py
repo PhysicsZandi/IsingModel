@@ -967,23 +967,17 @@ size = 14
 evolution_time = 4000
 average_time = 1000
 
-##### ANIMATION #####
-
 def animation():
     for t in tqdm(temperatures):
         ising = IsingSystem(kind_of_graph , size, t)
         ising.evolution_animation(evolution_time, average_time)
         ising.plot_network_animation()
 
-##### GRAPH PLOT #####
-
 def graph_plot():
     for t in tqdm(temperatures):
         ising = IsingSystem(kind_of_graph , size, t)
         ising.evolution_animation(evolution_time, average_time)
         ising.plot_graph()
-
-##### WEIGHTED GRAPH PLOT #####
 
 def weighted_graph_plot():
     for t in tqdm(temperatures):
@@ -993,8 +987,6 @@ def weighted_graph_plot():
         weighted_graph = WeightedGraph(kind_of_graph, size, t)
         weighted_graph.create_graph(two_points)
         weighted_graph.plot_graph()
-
-##### SAVE DATA #####
 
 def save_data():
     for t in tqdm(temperatures):
@@ -1006,8 +998,6 @@ def save_data_random():
         ising = IsingSystem(kind_of_graph, size, t)
         ising.save_data_random()
         
-##### PHASE TRANSITION ######
-
 def phase_transition():
     ising = TemperatureBehaviour(kind_of_graph, size, temperatures)
     ising.phase_transition()
@@ -1018,16 +1008,17 @@ def phase_transition_random():
     ising.phase_transition_random()
     ising.plot_physics_random()
 
-#####
-
 # For 1d graph
-
 #save_data_random()
 #phase_transition_random()
 
 # For 2d graphs
-
 #save_data()
 #phase_transition()
 
+# For animation
+#animation()
 
+# For graph plots
+#graph_plot()
+#weighted_graph_plot()
